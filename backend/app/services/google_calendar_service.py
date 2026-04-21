@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timedelta, timezone
 
 import httpx
@@ -6,6 +7,8 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.db.models import OAuthToken
+
+logger = logging.getLogger(__name__)
 
 
 class GoogleCalendarService:
@@ -50,6 +53,19 @@ class GoogleCalendarService:
 
         async with httpx.AsyncClient(timeout=20.0) as client:
             response = await client.get(cls.base_url, headers=cls._headers(access_token), params=params)
+            cls._raise_for_status(response, "Failed to fetch Google Calendar events")
+            return response.json().get("items", [])
+
+    @classmethod
+    def list_events(cls, db: Session, user_id: int) -> list[dict]:
+        
+        logger.info("Listing Google Calendar events for user %s", user_id)
+        access_token = cls._get_valid_access_token_sync(db, user_id)
+        headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
+        params = {"singleEvents": "true", "orderBy": "startTime"}
+        
+        with httpx.Client(timeout=20.0) as client:
+            response = client.get(cls.base_url, headers=headers, params=params)
             cls._raise_for_status(response, "Failed to fetch Google Calendar events")
             return response.json().get("items", [])
 
@@ -117,6 +133,26 @@ class GoogleCalendarService:
 
         return oauth_token.access_token
 
+    @classmethod
+    def _get_valid_access_token_sync(cls, db: Session, user_id: int) -> str:
+        oauth_token = db.query(OAuthToken).filter(OAuthToken.user_id == user_id).first()
+        if not oauth_token:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Google account not connected. Complete OAuth first.",
+            )
+
+        now = datetime.utcnow()
+        if oauth_token.token_expiry and oauth_token.token_expiry <= now and oauth_token.refresh_token:
+            refreshed = cls._refresh_access_token_sync(oauth_token.refresh_token)
+            oauth_token.access_token = refreshed["access_token"]
+            expires_in = int(refreshed.get("expires_in", 3600))
+            oauth_token.token_expiry = now + timedelta(seconds=expires_in)
+            db.commit()
+            db.refresh(oauth_token)
+
+        return oauth_token.access_token
+
     @staticmethod
     async def _refresh_access_token(refresh_token: str) -> dict:
         payload = {
@@ -127,6 +163,20 @@ class GoogleCalendarService:
         }
         async with httpx.AsyncClient(timeout=20.0) as client:
             response = await client.post("https://oauth2.googleapis.com/token", data=payload)
+            if response.status_code >= 400:
+                raise HTTPException(status_code=400, detail="Failed to refresh Google access token")
+            return response.json()
+
+    @staticmethod
+    def _refresh_access_token_sync(refresh_token: str) -> dict:
+        payload = {
+            "client_id": settings.google_client_id,
+            "client_secret": settings.google_client_secret,
+            "refresh_token": refresh_token,
+            "grant_type": "refresh_token",
+        }
+        with httpx.Client(timeout=20.0) as client:
+            response = client.post("https://oauth2.googleapis.com/token", data=payload)
             if response.status_code >= 400:
                 raise HTTPException(status_code=400, detail="Failed to refresh Google access token")
             return response.json()
@@ -148,4 +198,5 @@ class GoogleCalendarService:
     @staticmethod
     def _raise_for_status(response: httpx.Response, message: str) -> None:
         if response.status_code >= 400:
+            logger.error("%s: %s", message, response.text)
             raise HTTPException(status_code=response.status_code, detail=message)

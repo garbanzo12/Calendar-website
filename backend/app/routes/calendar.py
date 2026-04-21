@@ -4,8 +4,9 @@ from sqlalchemy.orm import Session
 from app.core.security import get_current_user
 from app.db.database import get_db
 from app.db.models import User
-from app.db.schemas import CalendarEventCreate, CalendarEventResponse, CalendarEventUpdate
+from app.db.schemas import CalendarEventCreate, CalendarEventResponse, CalendarEventUpdate, CalendarSyncResponse
 from app.services.google_calendar_service import GoogleCalendarService
+from app.services.task_service import TaskService
 
 router = APIRouter(prefix="/calendar", tags=["Calendar"])
 
@@ -56,3 +57,11 @@ async def delete_event(
     db: Session = Depends(get_db),
 ) -> None:
     await GoogleCalendarService.delete_event(db, current_user.id, event_id)
+
+
+@router.get("/sync", response_model=CalendarSyncResponse)
+def sync_calendar(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict[str, int]:
+    return TaskService.sync_tasks_from_google_calendar(db, current_user)
