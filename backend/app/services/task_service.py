@@ -93,8 +93,10 @@ class TaskService:
 
         if task.google_event_id:
             try:
+                print("detected")
                 GoogleCalendarService.delete_event(db, user.id, task.google_event_id)
             except Exception as exc:
+                print("Exception detected ")
                 logger.exception(
                     "Failed to delete Google Calendar event %s for task %s: %s",
                     task.google_event_id,
