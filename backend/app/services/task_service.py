@@ -34,12 +34,13 @@ class TaskService:
             )
             # Persist the Google event id so later updates/deletes can stay in sync.
             task.google_event_id = event["id"]
+            print(event)
             db.commit()
             db.refresh(task)
-        except Exception:
+        except Exception as e:
             db.rollback()
-            logger.exception("Failed to sync created task %s with Google Calendar", task.id)
-
+            print("ERROR GOOGLE:", e)
+            raise e
         return task
 
     @staticmethod
@@ -94,12 +95,8 @@ class TaskService:
             try:
                 # Try removing the remote event before deleting the local row.
                 await GoogleCalendarService.delete_event(db, user.id, task.google_event_id)
-            except Exception:
-                logger.exception(
-                    "Failed to delete Google Calendar event %s for task %s",
-                    task.google_event_id,
-                    task.id,
-                )
+            except Exception as e:
+                print("ERROR DELETE GOOGLE:", e)
 
         db.delete(task)
         db.commit()
