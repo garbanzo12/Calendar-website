@@ -91,8 +91,10 @@ class TaskService:
 
         if google_event_id:
             try:
+                print("detected")
                 await GoogleCalendarService.delete_event(db, user.id, google_event_id)
             except Exception:
+                print("Exception detected")
                 pass
 
         return True
