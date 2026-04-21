@@ -48,9 +48,9 @@ class AuthService:
         return f"https://accounts.google.com/o/oauth2/v2/auth?{urlencode(params)}"
 
     @staticmethod
-    async def handle_google_callback(db: Session, code: str) -> dict:
-        token_data = await AuthService._exchange_code_for_tokens(code)
-        user_info = await AuthService._fetch_google_user_info(token_data["access_token"])
+    def handle_google_callback(db: Session, code: str) -> dict:
+        token_data = AuthService._exchange_code_for_tokens(code)
+        user_info = AuthService._fetch_google_user_info(token_data["access_token"])
 
         user = db.query(User).filter(User.email == user_info["email"]).first()
         if not user:
@@ -68,7 +68,7 @@ class AuthService:
         return {"user": user, "jwt": create_access_token(str(user.id))}
 
     @staticmethod
-    async def _exchange_code_for_tokens(code: str) -> dict:
+    def _exchange_code_for_tokens(code: str) -> dict:
         payload = {
             "code": code,
             "client_id": settings.google_client_id,
@@ -77,17 +77,17 @@ class AuthService:
             "grant_type": "authorization_code",
         }
 
-        async with httpx.AsyncClient(timeout=20.0) as client:
-            response = await client.post("https://oauth2.googleapis.com/token", data=payload)
+        with httpx.Client(timeout=20.0) as client:
+            response = client.post("https://oauth2.googleapis.com/token", data=payload)
             if response.status_code >= 400:
                 raise HTTPException(status_code=400, detail="Failed to exchange Google OAuth code")
             return response.json()
 
     @staticmethod
-    async def _fetch_google_user_info(access_token: str) -> dict:
+    def _fetch_google_user_info(access_token: str) -> dict:
         headers = {"Authorization": f"Bearer {access_token}"}
-        async with httpx.AsyncClient(timeout=20.0) as client:
-            response = await client.get("https://www.googleapis.com/oauth2/v2/userinfo", headers=headers)
+        with httpx.Client(timeout=20.0) as client:
+            response = client.get("https://www.googleapis.com/oauth2/v2/userinfo", headers=headers)
             if response.status_code >= 400:
                 raise HTTPException(status_code=400, detail="Failed to fetch Google user profile")
             return response.json()

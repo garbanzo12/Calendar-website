@@ -11,9 +11,9 @@ from app.services.task_service import TaskService
 
 class ChatService:
     @staticmethod
-    async def process_message(db: Session, user: User, message: str) -> ChatResponse:
+    def process_message(db: Session, user: User, message: str) -> ChatResponse:
         parsed = ChatService._parse_message(message)
-        task = await TaskService.create_task(
+        task = TaskService.create_task(
             db,
             user,
             TaskCreate(

@@ -1,3 +1,4 @@
+import logging
 from datetime import timedelta
 
 from sqlalchemy.orm import Session
@@ -6,10 +7,12 @@ from app.db.models import Task, User
 from app.db.schemas import TaskCreate, TaskUpdate
 from app.services.google_calendar_service import GoogleCalendarService
 
+logger = logging.getLogger(__name__)
+
 
 class TaskService:
     @staticmethod
-    async def create_task(db: Session, user: User, payload: TaskCreate) -> Task:
+    def create_task(db: Session, user: User, payload: TaskCreate) -> Task:
         task = Task(
             user_id=user.id,
             title=payload.title,
@@ -21,7 +24,7 @@ class TaskService:
         db.refresh(task)
 
         try:
-            event = await GoogleCalendarService.create_event(
+            event = GoogleCalendarService.create_event(
                 db=db,
                 user_id=user.id,
                 summary=task.title,
@@ -29,11 +32,14 @@ class TaskService:
                 start=task.date,
                 end=task.date + timedelta(hours=1),
             )
+            # Store the remote event id so later updates and deletes stay in sync.
             task.google_event_id = event["id"]
             db.commit()
             db.refresh(task)
-        except Exception:
+            logger.info("Stored Google event %s for task %s", task.google_event_id, task.id)
+        except Exception as exc:
             db.rollback()
+            logger.exception("Failed to create Google Calendar event for task %s: %s", task.id, exc)
 
         return task
 
@@ -42,7 +48,7 @@ class TaskService:
         return db.query(Task).filter(Task.user_id == user_id).order_by(Task.date.asc()).all()
 
     @staticmethod
-    async def update_task(db: Session, user: User, task_id: int, payload: TaskUpdate) -> Task | None:
+    def update_task(db: Session, user: User, task_id: int, payload: TaskUpdate) -> Task | None:
         task = db.query(Task).filter(Task.id == task_id, Task.user_id == user.id).first()
         if not task:
             return None
@@ -59,7 +65,7 @@ class TaskService:
 
         if task.google_event_id:
             try:
-                await GoogleCalendarService.update_event(
+                GoogleCalendarService.update_event(
                     db,
                     user.id,
                     task.google_event_id,
@@ -74,25 +80,28 @@ class TaskService:
                         },
                     )(),
                 )
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.exception("Failed to update Google Calendar event for task %s: %s", task.id, exc)
 
         return task
 
     @staticmethod
-    async def delete_task(db: Session, user: User, task_id: int) -> bool:
+    def delete_task(db: Session, user: User, task_id: int) -> bool:
         task = db.query(Task).filter(Task.id == task_id, Task.user_id == user.id).first()
         if not task:
             return False
 
-        google_event_id = task.google_event_id
+        if task.google_event_id:
+            try:
+                GoogleCalendarService.delete_event(db, user.id, task.google_event_id)
+            except Exception as exc:
+                logger.exception(
+                    "Failed to delete Google Calendar event %s for task %s: %s",
+                    task.google_event_id,
+                    task.id,
+                    exc,
+                )
+
         db.delete(task)
         db.commit()
-
-        if google_event_id:
-            try:
-                await GoogleCalendarService.delete_event(db, user.id, google_event_id)
-            except Exception:
-                pass
-
         return True

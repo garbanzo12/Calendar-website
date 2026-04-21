@@ -39,11 +39,11 @@ def google_login() -> dict[str, str]:
 
 
 @router.get("/google/callback")
-async def google_callback(
+def google_callback(
     code: str = Query(...),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    result = await AuthService.handle_google_callback(db, code)
+    result = AuthService.handle_google_callback(db, code)
     redirect_url = (
         f"{AuthService.get_success_redirect_url()}"
         f"?token={result['jwt']}&email={result['user'].email}&name={result['user'].name}"
