@@ -2,10 +2,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.db.database import Base, engine
+from app.db.database import Base, engine, ensure_task_google_event_id_column
 from app.routes import auth, calendar, chat, tasks
 
 Base.metadata.create_all(bind=engine)
+ensure_task_google_event_id_column()
 
 app = FastAPI(
     title="Personal AI Calendar Backend",

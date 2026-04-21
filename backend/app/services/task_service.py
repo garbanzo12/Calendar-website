@@ -1,3 +1,4 @@
+import logging
 from datetime import timedelta
 
 from sqlalchemy.orm import Session
@@ -5,6 +6,8 @@ from sqlalchemy.orm import Session
 from app.db.models import Task, User
 from app.db.schemas import TaskCreate, TaskUpdate
 from app.services.google_calendar_service import GoogleCalendarService
+
+logger = logging.getLogger(__name__)
 
 
 class TaskService:
@@ -29,11 +32,13 @@ class TaskService:
                 start=task.date,
                 end=task.date + timedelta(hours=1),
             )
+            # Persist the Google event id so later updates/deletes can stay in sync.
             task.google_event_id = event["id"]
             db.commit()
             db.refresh(task)
         except Exception:
             db.rollback()
+            logger.exception("Failed to sync created task %s with Google Calendar", task.id)
 
         return task
 
@@ -75,7 +80,7 @@ class TaskService:
                     )(),
                 )
             except Exception:
-                pass
+                logger.exception("Failed to sync updated task %s to Google Calendar", task.id)
 
         return task
 
@@ -85,14 +90,18 @@ class TaskService:
         if not task:
             return False
 
-        google_event_id = task.google_event_id
+        if task.google_event_id:
+            try:
+                # Try removing the remote event before deleting the local row.
+                await GoogleCalendarService.delete_event(db, user.id, task.google_event_id)
+            except Exception:
+                logger.exception(
+                    "Failed to delete Google Calendar event %s for task %s",
+                    task.google_event_id,
+                    task.id,
+                )
+
         db.delete(task)
         db.commit()
-
-        if google_event_id:
-            try:
-                await GoogleCalendarService.delete_event(db, user.id, google_event_id)
-            except Exception:
-                pass
 
         return True
