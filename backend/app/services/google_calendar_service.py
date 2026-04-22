@@ -1,4 +1,5 @@
 import logging
+import re
 from datetime import date, datetime, time, timedelta, timezone
 
 import httpx
@@ -111,7 +112,9 @@ class GoogleCalendarService:
 
     @classmethod
     async def update_event(cls, db: Session, user_id: int, event_id: str, payload) -> dict:
-        event = await cls._get_event(db, user_id, event_id)
+        calendar_id, clean_event_id = cls._parse_google_event_id(event_id)
+        events_url = cls._events_url(calendar_id)
+        event = await cls._get_event(db, user_id, clean_event_id, events_url)
 
         if payload.summary is not None:
             event["summary"] = payload.summary
@@ -132,7 +135,7 @@ class GoogleCalendarService:
             db=db,
             user_id=user_id,
             method="PUT",
-            url=f"{cls.base_url}/{event_id}",
+            url=f"{events_url}/{clean_event_id}",
             json=event,
             error_message="Failed to update Google Calendar event",
         )
@@ -140,21 +143,30 @@ class GoogleCalendarService:
 
     @classmethod
     async def delete_event(cls, db: Session, user_id: int, event_id: str) -> None:
+        calendar_id, clean_event_id = cls._parse_google_event_id(event_id)
+        events_url = cls._events_url(calendar_id)
         await cls._calendar_request(
             db=db,
             user_id=user_id,
             method="DELETE",
-            url=f"{cls.base_url}/{event_id}",
+            url=f"{events_url}/{clean_event_id}",
             error_message="Failed to delete Google Calendar event",
         )
 
     @classmethod
-    async def _get_event(cls, db: Session, user_id: int, event_id: str) -> dict:
+    async def _get_event(
+        cls,
+        db: Session,
+        user_id: int,
+        event_id: str,
+        events_url: str | None = None,
+    ) -> dict:
+        url = events_url or cls.base_url
         response = await cls._calendar_request(
             db=db,
             user_id=user_id,
             method="GET",
-            url=f"{cls.base_url}/{event_id}",
+            url=f"{url}/{event_id}",
             error_message="Failed to fetch Google Calendar event",
         )
         return response.json()
@@ -295,6 +307,44 @@ class GoogleCalendarService:
 
         boundary_name = "end" if is_end else "start"
         raise ValueError(f"Google event is missing a {boundary_name} date")
+
+    @staticmethod
+    def _parse_google_event_id(raw_id: str) -> tuple[str, str]:
+        """
+        Parses a stored google_event_id into (calendar_id, clean_event_id).
+
+        Tasks synced from Google are stored as "{calendar_id}_{raw_event_id}",
+        where calendar_id is an email address (contains '@').
+        Tasks created directly via the app store the bare event ID without a prefix.
+
+        The regex matches the email's domain (which, per RFC, never contains '_')
+        to find the correct split point — robust even when the local-part of the
+        email (before '@') itself contains underscores.
+
+        Returns:
+            (calendar_id, clean_event_id)  — calendar_id defaults to "primary"
+            when the stored ID is not in prefixed format.
+        """
+        if "@" not in raw_id:
+            # Bare event ID — created directly via the app, lives on primary calendar.
+            return "primary", raw_id
+
+        # Pattern: <anything>@<domain-without-underscores>_<event_id>
+        # The domain part of an email address never contains underscores,
+        # so matching [^_]+ after '@' reliably identifies the split point.
+        match = re.match(r'^(.+@[^_]+)_(.+)$', raw_id)
+        if match:
+            return match.group(1), match.group(2)
+
+        # Fallback: split on first underscore (handles unexpected formats).
+        parts = raw_id.split("_", 1)
+        return ("primary", parts[1]) if len(parts) > 1 else ("primary", raw_id)
+
+    @staticmethod
+    def _events_url(calendar_id: str) -> str:
+        """Builds the Google Calendar events endpoint URL for a given calendar ID."""
+        encoded = quote(calendar_id, safe="")
+        return f"https://www.googleapis.com/calendar/v3/calendars/{encoded}/events"
 
     @staticmethod
     def _raise_for_status(response: httpx.Response, message: str) -> None:
