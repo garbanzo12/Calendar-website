@@ -30,14 +30,39 @@ export default function TaskList({ onTaskDeleted, refreshSignal }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // ── Filter / Search ──────────────────────────────────────────
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterDate, setFilterDate] = useState("");
+
+  const filteredTasks = tasks.filter((task) => {
+    const matchesName = task.title
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
+    const matchesDate = filterDate
+      ? (task.date || "").startsWith(filterDate)
+      : true;
+    return matchesName && matchesDate;
+  });
+
   // ── Pagination ──────────────────────────────────────────────
   const [currentPage, setCurrentPage] = useState(1);
   const tasksPerPage = TASKS_PER_PAGE;
 
-  const totalPages = Math.max(1, Math.ceil(tasks.length / tasksPerPage));
+  const totalPages = Math.max(1, Math.ceil(filteredTasks.length / tasksPerPage));
   const indexOfLastTask = currentPage * tasksPerPage;
   const indexOfFirstTask = indexOfLastTask - tasksPerPage;
-  const currentTasks = tasks.slice(indexOfFirstTask, indexOfLastTask);
+  const currentTasks = filteredTasks.slice(indexOfFirstTask, indexOfLastTask);
+
+  // Reset to page 1 whenever search or date filter changes
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+    setCurrentPage(1);
+  };
+
+  const handleDateChange = (e) => {
+    setFilterDate(e.target.value);
+    setCurrentPage(1);
+  };
 
   // ── Edit state ───────────────────────────────────────────────
   const [editingTask, setEditingTask] = useState(null);
@@ -221,12 +246,53 @@ export default function TaskList({ onTaskDeleted, refreshSignal }) {
           </button>
         </div>
 
+        {/* ── Search & Filter bar ──────────────────────────────── */}
+        <div className="search-bar">
+          <div className="search-input-wrap">
+            <span className="search-icon" aria-hidden="true">🔍</span>
+            <input
+              type="text"
+              className="search-input"
+              placeholder="Search by name…"
+              value={searchTerm}
+              onChange={handleSearchChange}
+              aria-label="Search tasks by name"
+            />
+            {searchTerm && (
+              <button
+                className="search-clear"
+                type="button"
+                onClick={() => { setSearchTerm(""); setCurrentPage(1); }}
+                aria-label="Clear search"
+              >✕</button>
+            )}
+          </div>
+          <input
+            type="date"
+            className="date-filter-input"
+            value={filterDate}
+            onChange={handleDateChange}
+            aria-label="Filter tasks by date"
+          />
+          {filterDate && (
+            <button
+              className="ghost-button filter-clear-btn"
+              type="button"
+              onClick={() => { setFilterDate(""); setCurrentPage(1); }}
+            >Clear date</button>
+          )}
+        </div>
+
         {loading ? <p className="status-text">Loading tasks…</p> : null}
         {error ? <p className="status-text error-text">{error}</p> : null}
 
         <div className="task-list">
           {!loading && tasks.length === 0 ? (
             <p className="status-text">No tasks yet.</p>
+          ) : null}
+
+          {!loading && tasks.length > 0 && filteredTasks.length === 0 ? (
+            <p className="status-text">No tasks found for your search.</p>
           ) : null}
 
           {currentTasks.map((task) => (
@@ -257,7 +323,7 @@ export default function TaskList({ onTaskDeleted, refreshSignal }) {
         </div>
 
         {/* ── Pagination ──────────────────────────────────────── */}
-        {tasks.length > tasksPerPage && (
+        {filteredTasks.length > tasksPerPage && (
           <div className="pagination">
             <button
               className="page-btn"
