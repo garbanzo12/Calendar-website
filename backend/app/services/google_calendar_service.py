@@ -189,6 +189,8 @@ class GoogleCalendarService:
         oauth_token = cls._get_oauth_token(db, user_id)
         access_token = await cls._ensure_valid_access_token(db, oauth_token)
 
+        import time
+        start_time = time.time()
         try:
             async with httpx.AsyncClient(timeout=20.0) as client:
                 response = await client.request(
@@ -206,11 +208,21 @@ class GoogleCalendarService:
                         **request_kwargs,
                     )
                 cls._raise_for_status(response, error_message)
+                
+                duration_ms = (time.time() - start_time) * 1000
+                logger.info(
+                    "Google Calendar API | method=%s URL=%s | status_code=%s | execution_time_ms=%.2f",
+                    method,
+                    url,
+                    response.status_code,
+                    duration_ms,
+                )
                 return response
         except HTTPException:
             raise
         except Exception as exc:
-            logger.exception("%s", error_message)
+            duration_ms = (time.time() - start_time) * 1000
+            logger.exception("%s | execution_time_ms=%.2f", error_message, duration_ms)
             raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=error_message) from exc
 
     @classmethod
@@ -226,7 +238,7 @@ class GoogleCalendarService:
     @classmethod
     async def _ensure_valid_access_token(cls, db: Session, oauth_token: OAuthToken) -> str:
         now = datetime.utcnow()
-        if oauth_token.token_expiry and oauth_token.token_expiry <= now:
+        if oauth_token.token_expiry and oauth_token.token_expiry <= now + timedelta(minutes=1):
             if not oauth_token.refresh_token:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
