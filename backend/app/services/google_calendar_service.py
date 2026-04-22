@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.db.models import OAuthToken
+from urllib.parse import quote
 
 logger = logging.getLogger(__name__)
 
@@ -41,12 +42,25 @@ class GoogleCalendarService:
         return response.json()
 
     @classmethod
+    async def list_calendars(cls, db: Session, user_id: int) -> list[dict]:
+        """Fetch all calendars from the user's Google Calendar list."""
+        response = await cls._calendar_request(
+            db=db,
+            user_id=user_id,
+            method="GET",
+            url="https://www.googleapis.com/calendar/v3/users/me/calendarList",
+            error_message="Failed to fetch Google Calendar list",
+        )
+        return response.json().get("items", [])
+
+    @classmethod
     async def list_events(
         cls,
         db: Session,
         user_id: int,
         time_min: str | None = None,
         time_max: str | None = None,
+        calendar_id: str = "primary",
     ) -> list[dict]:
 
         now = datetime.now(timezone.utc)
@@ -62,12 +76,14 @@ class GoogleCalendarService:
             "timeMin": time_min,
             "timeMax": time_max,
         }
+        encoded_calendar_id = quote(calendar_id, safe="")
+        url = f"https://www.googleapis.com/calendar/v3/calendars/{encoded_calendar_id}/events"
 
         response = await cls._calendar_request(
             db=db,
             user_id=user_id,
             method="GET",
-            url=cls.base_url,
+            url=url,
             params=params,
             error_message="Failed to fetch Google Calendar events",
         )

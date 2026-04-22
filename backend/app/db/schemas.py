@@ -92,3 +92,4 @@ class CalendarEventResponse(BaseModel):
 class CalendarSyncResponse(BaseModel):
     imported: int
     skipped: int
+    calendars: int

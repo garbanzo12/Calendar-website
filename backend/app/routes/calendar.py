@@ -70,15 +70,14 @@ async def sync_calendar(
     now = datetime.now(timezone.utc)
     time_min = now.isoformat()
     time_max = (now + timedelta(days=30)).isoformat()
-    events = await GoogleCalendarService.list_events(
-        db=db,
-        user_id=current_user.id,
-        time_min=time_min,
-        time_max=time_max,
-    )
 
-    imported = 0
-    skipped = 0
+    # Fetch all user calendars
+    calendars = await GoogleCalendarService.list_calendars(db=db, user_id=current_user.id)
+
+    print("=== CALENDARS FOUND ===")
+    print(len(calendars))
+
+    # Load all already-imported prefixed IDs up front
     existing_event_ids = {
         event_id
         for (event_id,) in db.query(Task.google_event_id)
@@ -86,29 +85,69 @@ async def sync_calendar(
         .all()
     }
 
-    for event in events:
-        event_id = event.get("id")
-        if not event_id or event_id in existing_event_ids:
-            skipped += 1
+    imported = 0
+    skipped = 0
+
+    for calendar in calendars:
+        calendar_id = calendar.get("id")
+        if not calendar_id:
             continue
+
+        print(f"Syncing calendar: {calendar_id}")
 
         try:
-            task_date = GoogleCalendarService.event_start_to_task_date(event)
-        except ValueError as exc:
-            logger.exception("Skipping Google event import for user_id=%s event_id=%s", current_user.id, event_id)
-            skipped += 1
+            events = await GoogleCalendarService.list_events(
+                db=db,
+                user_id=current_user.id,
+                time_min=time_min,
+                time_max=time_max,
+                calendar_id=calendar_id,
+            )
+        except Exception:
+            logger.exception(
+                "Failed to fetch events for calendar_id=%s user_id=%s — skipping",
+                calendar_id,
+                current_user.id,
+            )
             continue
 
-        task = Task(
-            user_id=current_user.id,
-            title=event.get("summary") or "(No title)",
-            description=event.get("description"),
-            date=task_date,
-            google_event_id=event_id,
-        )
-        db.add(task)
-        existing_event_ids.add(event_id)
-        imported += 1
+        print(f"Events found: {len(events)}")
+
+        for event in events:
+            raw_event_id = event.get("id")
+            if not raw_event_id:
+                skipped += 1
+                continue
+
+            # Prefix with calendar_id to ensure global uniqueness
+            prefixed_id = f"{calendar_id}_{raw_event_id}"
+
+            if prefixed_id in existing_event_ids:
+                skipped += 1
+                continue
+
+            try:
+                task_date = GoogleCalendarService.event_start_to_task_date(event)
+            except ValueError:
+                logger.exception(
+                    "Skipping Google event import for user_id=%s event_id=%s calendar_id=%s",
+                    current_user.id,
+                    raw_event_id,
+                    calendar_id,
+                )
+                skipped += 1
+                continue
+
+            task = Task(
+                user_id=current_user.id,
+                title=event.get("summary") or "(No title)",
+                description=event.get("description"),
+                date=task_date,
+                google_event_id=prefixed_id,
+            )
+            db.add(task)
+            existing_event_ids.add(prefixed_id)
+            imported += 1
 
     db.commit()
-    return CalendarSyncResponse(imported=imported, skipped=skipped)
+    return CalendarSyncResponse(imported=imported, skipped=skipped, calendars=len(calendars))
