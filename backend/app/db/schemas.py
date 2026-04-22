@@ -87,3 +87,8 @@ class CalendarEventResponse(BaseModel):
     description: str | None = None
     start: dict
     end: dict
+
+
+class CalendarSyncResponse(BaseModel):
+    imported: int
+    skipped: int

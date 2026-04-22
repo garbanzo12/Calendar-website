@@ -10,7 +10,7 @@ function formatDate(value) {
   }
 }
 
-export default function TaskList({ refreshSignal }) {
+export default function TaskList({ onTaskDeleted, refreshSignal }) {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -37,6 +37,11 @@ export default function TaskList({ refreshSignal }) {
     try {
       await apiClient.delete(`/tasks/${taskId}`);
       setTasks((current) => current.filter((task) => task.id !== taskId));
+      setError("");
+
+      if (onTaskDeleted) {
+        onTaskDeleted(taskId);
+      }
     } catch (requestError) {
       setError(requestError.response?.data?.detail || "Unable to delete task.");
     }
