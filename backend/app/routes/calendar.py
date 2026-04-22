@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
@@ -64,12 +64,13 @@ async def delete_event(
 
 @router.get("/sync", response_model=CalendarSyncResponse)
 async def sync_calendar(
+    year: int | None = Query(default=None, description="Year to sync (default: current year)."),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> CalendarSyncResponse:
-    now = datetime.now(timezone.utc)
-    time_min = now.isoformat()
-    time_max = (now + timedelta(days=30)).isoformat()
+    target_year = year or datetime.now(timezone.utc).year
+
+    print(f"=== SYNCING YEAR: {target_year} ===")
 
     # Fetch all user calendars
     calendars = await GoogleCalendarService.list_calendars(db=db, user_id=current_user.id)
@@ -99,9 +100,8 @@ async def sync_calendar(
             events = await GoogleCalendarService.list_events(
                 db=db,
                 user_id=current_user.id,
-                time_min=time_min,
-                time_max=time_max,
                 calendar_id=calendar_id,
+                year=target_year,
             )
         except Exception:
             logger.exception(

@@ -61,14 +61,19 @@ class GoogleCalendarService:
         time_min: str | None = None,
         time_max: str | None = None,
         calendar_id: str = "primary",
+        year: int | None = None,
     ) -> list[dict]:
 
-        now = datetime.now(timezone.utc)
+        # Determine the target year (explicit > current)
+        target_year = year or datetime.now(timezone.utc).year
 
+        # Use full-year boundaries when no manual range is provided
         if not time_min:
-            time_min = (now - timedelta(days=30)).isoformat()
+            time_min = datetime(target_year, 1, 1, 0, 0, 0, tzinfo=timezone.utc).isoformat()
         if not time_max:
-            time_max = (now + timedelta(days=60)).isoformat()
+            time_max = datetime(target_year, 12, 31, 23, 59, 59, tzinfo=timezone.utc).isoformat()
+
+        print(f"Fetching events from {time_min} to {time_max}")
 
         params = {
             "singleEvents": "true",
