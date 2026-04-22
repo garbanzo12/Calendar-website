@@ -10,7 +10,7 @@ export default function Dashboard() {
   const [refreshCounter, setRefreshCounter] = useState(0);
   const greeting = user?.name?.split(" ")[0] || "there";
 
-  const handleTaskCreated = () => {
+  const handleTaskChanged = () => {
     setRefreshCounter((value) => value + 1);
   };
 
@@ -27,8 +27,8 @@ export default function Dashboard() {
       </section>
 
       <section className="dashboard-grid">
-        <Chat onTaskCreated={handleTaskCreated} />
-        <TaskList refreshSignal={refreshCounter} />
+        <Chat onTaskCreated={handleTaskChanged} />
+        <TaskList onTaskDeleted={handleTaskChanged} refreshSignal={refreshCounter} />
         <CalendarView refreshSignal={refreshCounter} />
       </section>
     </main>
