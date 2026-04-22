@@ -10,30 +10,25 @@ from app.services.google_calendar_service import GoogleCalendarService
 class TaskService:
     @staticmethod
     async def create_task(db: Session, user: User, payload: TaskCreate) -> Task:
+        event = await GoogleCalendarService.create_event(
+            db=db,
+            user_id=user.id,
+            summary=payload.title,
+            description=payload.description,
+            start=payload.date,
+            end=payload.date + timedelta(hours=1),
+        )
+
         task = Task(
             user_id=user.id,
             title=payload.title,
             description=payload.description,
             date=payload.date,
+            google_event_id=event.get("id"),
         )
         db.add(task)
         db.commit()
         db.refresh(task)
-
-        try:
-            event = await GoogleCalendarService.create_event(
-                db=db,
-                user_id=user.id,
-                summary=task.title,
-                description=task.description,
-                start=task.date,
-                end=task.date + timedelta(hours=1),
-            )
-            task.google_event_id = event["id"]
-            db.commit()
-            db.refresh(task)
-        except Exception:
-            db.rollback()
 
         return task
 
@@ -58,24 +53,21 @@ class TaskService:
         db.refresh(task)
 
         if task.google_event_id:
-            try:
-                await GoogleCalendarService.update_event(
-                    db,
-                    user.id,
-                    task.google_event_id,
-                    type(
-                        "TaskCalendarUpdate",
-                        (),
-                        {
-                            "summary": task.title,
-                            "description": task.description,
-                            "start": task.date,
-                            "end": task.date + timedelta(hours=1),
-                        },
-                    )(),
-                )
-            except Exception:
-                pass
+            await GoogleCalendarService.update_event(
+                db,
+                user.id,
+                task.google_event_id,
+                type(
+                    "TaskCalendarUpdate",
+                    (),
+                    {
+                        "summary": task.title,
+                        "description": task.description,
+                        "start": task.date,
+                        "end": task.date + timedelta(hours=1),
+                    },
+                )(),
+            )
 
         return task
 
@@ -90,11 +82,6 @@ class TaskService:
         db.commit()
 
         if google_event_id:
-            try:
-                print("detected")
-                await GoogleCalendarService.delete_event(db, user.id, google_event_id)
-            except Exception:
-                print("Exception detected")
-                pass
+            await GoogleCalendarService.delete_event(db, user.id, google_event_id)
 
         return True
