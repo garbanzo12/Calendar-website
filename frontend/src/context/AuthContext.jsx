@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
+import apiClient from "../api/client";
+
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
@@ -45,6 +47,14 @@ export function AuthProvider({ children }) {
     };
 
     login(callbackToken, nextUser);
+
+    apiClient
+      .post("/calendar/sync", null, {
+        headers: { Authorization: `Bearer ${callbackToken}` },
+      })
+      .then(() => console.log("Calendar synced successfully"))
+      .catch((err) => console.error("Calendar sync failed:", err));
+
     navigate("/dashboard", { replace: true });
   }, [location.search, navigate]);
 
