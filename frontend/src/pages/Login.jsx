@@ -23,7 +23,16 @@ export default function Login() {
 
     try {
       const response = await apiClient.post("/auth/login", form);
-      login(response.data.access_token, response.data.user);
+      const token = response.data.access_token;
+      login(token, response.data.user);
+
+      apiClient
+        .post("/calendar/sync", null, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        .then(() => console.log("Calendar synced successfully"))
+        .catch((err) => console.error("Calendar sync failed:", err));
+
       navigate("/dashboard");
     } catch (requestError) {
       setError(requestError.response?.data?.detail || "Login failed.");
