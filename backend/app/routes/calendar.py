@@ -150,4 +150,5 @@ async def sync_calendar(
             imported += 1
 
     db.commit()
+    logger.info(f"[ACTION] Calendar synced for user {current_user.id}: {imported} imported, {skipped} skipped from {len(calendars)} calendars")
     return CalendarSyncResponse(imported=imported, skipped=skipped, calendars=len(calendars))
