@@ -60,11 +60,22 @@ class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1)
 
 
+class ChatMessageResponse(BaseModel):
+    id: int
+    role: str
+    content: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 class ChatResponse(BaseModel):
-    parsed_title: str
-    parsed_date: datetime
-    task: TaskResponse
+    parsed_title: str | None = None
+    parsed_date: datetime | None = None
+    task: TaskResponse | None = None
     message: str
+    messages: list[ChatMessageResponse] = []
 
 
 class CalendarEventCreate(BaseModel):
