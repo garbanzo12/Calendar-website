@@ -49,9 +49,6 @@ class TaskService:
         if payload.date is not None:
             task.date = payload.date
 
-        db.commit()
-        db.refresh(task)
-
         if task.google_event_id:
             await GoogleCalendarService.update_event(
                 db,
@@ -69,6 +66,9 @@ class TaskService:
                 )(),
             )
 
+        db.commit()
+        db.refresh(task)
+
         return task
 
     @staticmethod
@@ -77,11 +77,10 @@ class TaskService:
         if not task:
             return False
 
-        google_event_id = task.google_event_id
+        if task.google_event_id:
+            await GoogleCalendarService.delete_event(db, user.id, task.google_event_id)
+
         db.delete(task)
         db.commit()
-
-        if google_event_id:
-            await GoogleCalendarService.delete_event(db, user.id, google_event_id)
 
         return True

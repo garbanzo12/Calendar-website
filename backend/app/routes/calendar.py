@@ -68,15 +68,22 @@ async def sync_calendar(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> CalendarSyncResponse:
-    target_year = year or datetime.now(timezone.utc).year
+    import time
+    from datetime import timedelta
 
-    print(f"=== SYNCING YEAR: {target_year} ===")
+    logger.info(f"[SYNC START] user_id={current_user.id}")
+    
+    # Debounce / Throttle: Skip if synced less than 3 minutes ago
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+    if current_user.last_sync_at and (now_utc - current_user.last_sync_at) < timedelta(minutes=3):
+        logger.info(f"[SYNC RESULT] imported=0 skipped=0 duration=0ms reason=throttled user_id={current_user.id}")
+        return CalendarSyncResponse(imported=0, skipped=0, calendars=0)
+
+    start_time = time.time()
+    target_year = year or now_utc.year
 
     # Fetch all user calendars
     calendars = await GoogleCalendarService.list_calendars(db=db, user_id=current_user.id)
-
-    print("=== CALENDARS FOUND ===")
-    print(len(calendars))
 
     # Load all already-imported prefixed IDs up front
     existing_event_ids = {
@@ -94,8 +101,6 @@ async def sync_calendar(
         if not calendar_id:
             continue
 
-        print(f"Syncing calendar: {calendar_id}")
-
         try:
             events = await GoogleCalendarService.list_events(
                 db=db,
@@ -110,8 +115,6 @@ async def sync_calendar(
                 current_user.id,
             )
             continue
-
-        print(f"Events found: {len(events)}")
 
         for event in events:
             raw_event_id = event.get("id")
@@ -149,6 +152,9 @@ async def sync_calendar(
             existing_event_ids.add(prefixed_id)
             imported += 1
 
+    current_user.last_sync_at = now_utc
     db.commit()
-    logger.info(f"[ACTION] Calendar synced for user {current_user.id}: {imported} imported, {skipped} skipped from {len(calendars)} calendars")
+
+    duration_ms = int((time.time() - start_time) * 1000)
+    logger.info(f"[SYNC RESULT] imported={imported} skipped={skipped} duration={duration_ms}ms user_id={current_user.id}")
     return CalendarSyncResponse(imported=imported, skipped=skipped, calendars=len(calendars))

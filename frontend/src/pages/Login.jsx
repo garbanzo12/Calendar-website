@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import apiClient from "../api/client";
+import { syncCalendar } from "../api/calendarService";
 import { useAuth } from "../context/AuthContext";
 
 export default function Login() {
@@ -26,12 +27,9 @@ export default function Login() {
       const token = response.data.access_token;
       login(token, response.data.user);
 
-      apiClient
-        .post("/calendar/sync", null, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        .then(() => console.log("Calendar synced successfully"))
-        .catch((err) => console.error("Calendar sync failed:", err));
+      syncCalendar(token).catch((err) => {
+        console.warn("Sync failed, continuing...", err);
+      });
 
       navigate("/dashboard");
     } catch (requestError) {

@@ -14,6 +14,7 @@ class User(Base):
     email = Column(String(150), unique=True, nullable=False, index=True)
     password = Column(String(255), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    last_sync_at = Column(DateTime, nullable=True)
 
     tasks = relationship("Task", back_populates="user", cascade="all, delete-orphan")
     oauth_tokens = relationship("OAuthToken", back_populates="user", cascade="all, delete-orphan")
