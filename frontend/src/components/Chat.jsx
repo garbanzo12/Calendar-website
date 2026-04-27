@@ -2,10 +2,16 @@ import { useState, useEffect, useRef } from "react";
 
 import apiClient from "../api/client";
 
+const EMPTY_STATE_MESSAGE = {
+  role: "assistant",
+  content: "Tell me something like 'Schedule a meeting tomorrow at 3pm'.",
+};
+
 export default function Chat({ onTaskCreated }) {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([]);
   const [isSending, setIsSending] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const messagesEndRef = useRef(null);
 
@@ -14,12 +20,7 @@ export default function Chat({ onTaskCreated }) {
       try {
         const response = await apiClient.get("/chat/history?limit=50");
         if (response.data.length === 0) {
-          setMessages([
-            {
-              role: "assistant",
-              content: "Tell me something like 'Schedule a meeting tomorrow at 3pm'.",
-            },
-          ]);
+          setMessages([EMPTY_STATE_MESSAGE]);
         } else {
           setMessages(response.data);
         }
@@ -44,7 +45,7 @@ export default function Chat({ onTaskCreated }) {
     event.preventDefault();
 
     const trimmed = message.trim();
-    if (!trimmed || isSending) {
+    if (!trimmed || isSending || isClearing) {
       return;
     }
 
@@ -54,12 +55,10 @@ export default function Chat({ onTaskCreated }) {
     setIsSending(true);
 
     try {
-      const response = await apiClient.post("/chat", { message: trimmed });
+      const response = await apiClient.post("/chat/message", { message: trimmed });
       const newMessages = response.data.messages || [];
-      
-      // If the backend returned both messages, we can just append the assistant one.
-      // Or we can just append from response.data.message
-      const assistantMessage = newMessages.find(m => m.role === "assistant") || {
+
+      const assistantMessage = newMessages.find((entry) => entry.role === "assistant") || {
         role: "assistant",
         content: response.data.message || "Task scheduled successfully",
       };
@@ -85,12 +84,52 @@ export default function Chat({ onTaskCreated }) {
     }
   };
 
+  const handleClearMemory = async () => {
+    if (isSending || isClearing) {
+      return;
+    }
+
+    setIsClearing(true);
+    try {
+      await apiClient.delete("/chat/history");
+      setMessages([EMPTY_STATE_MESSAGE]);
+    } catch (error) {
+      console.error("Failed to clear chat memory:", error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "I couldn't clear the saved memory right now.",
+        },
+      ]);
+    } finally {
+      setIsClearing(false);
+    }
+  };
+
+  const statusLabel = isClearing
+    ? "Clearing memory..."
+    : isSending
+      ? "Recordando contexto..."
+      : "Persistent memory enabled";
+
   return (
     <section className="panel chat-panel">
       <div className="panel-header">
         <div>
           <p className="eyebrow">Main feature</p>
           <h2>Chat scheduler</h2>
+        </div>
+        <div className="chat-panel-actions">
+          <span className={`chat-status ${isSending ? "chat-status-active" : ""}`}>{statusLabel}</span>
+          <button
+            className="ghost-button"
+            disabled={isLoadingHistory || isSending || isClearing}
+            onClick={handleClearMemory}
+            type="button"
+          >
+            {isClearing ? "Clearing..." : "Limpiar memoria"}
+          </button>
         </div>
       </div>
 
@@ -111,7 +150,7 @@ export default function Chat({ onTaskCreated }) {
         {isSending && (
           <article className="message-bubble system-message">
             <span>Assistant</span>
-            <p className="typing-indicator">Escribiendo<span>.</span><span>.</span><span>.</span></p>
+            <p className="typing-indicator">Recordando contexto<span>.</span><span>.</span><span>.</span></p>
           </article>
         )}
         <div ref={messagesEndRef} />
@@ -124,7 +163,7 @@ export default function Chat({ onTaskCreated }) {
           value={message}
           onChange={(event) => setMessage(event.target.value)}
         />
-        <button className="primary-button" disabled={isSending || isLoadingHistory} type="submit">
+        <button className="primary-button" disabled={isSending || isClearing || isLoadingHistory} type="submit">
           {isSending ? "Sending..." : "Send"}
         </button>
       </form>

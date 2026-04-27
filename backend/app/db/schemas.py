@@ -75,7 +75,11 @@ class ChatResponse(BaseModel):
     parsed_date: datetime | None = None
     task: TaskResponse | None = None
     message: str
-    messages: list[ChatMessageResponse] = []
+    messages: list[ChatMessageResponse] = Field(default_factory=list)
+
+
+class ChatClearResponse(BaseModel):
+    message: str
 
 
 class CalendarEventCreate(BaseModel):

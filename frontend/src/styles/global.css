@@ -235,6 +235,33 @@ button {
   margin-bottom: 1rem;
 }
 
+.chat-panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.chat-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.5rem;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid rgba(15, 118, 110, 0.18);
+  background: rgba(15, 118, 110, 0.09);
+  color: var(--accent);
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.chat-status-active {
+  background: rgba(37, 99, 235, 0.1);
+  border-color: rgba(37, 99, 235, 0.18);
+  color: #1d4ed8;
+}
+
 .panel-header h2 {
   margin: 0.2rem 0 0;
 }
@@ -715,5 +742,16 @@ button {
 
   .message-bubble {
     max-width: 100%;
+  }
+
+  .chat-panel-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .chat-status,
+  .chat-panel-actions .ghost-button {
+    width: 100%;
+    justify-content: center;
   }
 }

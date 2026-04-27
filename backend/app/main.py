@@ -4,7 +4,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.db.database import Base, engine
+from app.db.bootstrap import initialize_database
 from app.routes import auth, calendar, chat, tasks
 
 # Configure logging
@@ -14,12 +14,7 @@ logger = logging.getLogger("api")
 # Keep uvicorn access logs minimal to reduce noise
 logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
 
-Base.metadata.create_all(bind=engine)
-try:
-    with engine.begin() as conn:
-        conn.exec_driver_sql("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_sync_at TIMESTAMP")
-except Exception:
-    pass
+initialize_database()
 
 app = FastAPI(
     title="Personal AI Calendar Backend",

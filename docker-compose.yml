@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:15
+    image: pgvector/pgvector:pg15
     container_name: postgres_db
     restart: always
     environment:
@@ -30,6 +30,16 @@ services:
       GOOGLE_OAUTH_SCOPE: ${GOOGLE_OAUTH_SCOPE:-openid email profile https://www.googleapis.com/auth/calendar}
       FRONTEND_SUCCESS_URL: ${FRONTEND_SUCCESS_URL:-http://localhost:5173/dashboard}
       BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_CHAT_MODEL: ${OPENAI_CHAT_MODEL:-gpt-4.1}
+      OPENAI_EMBEDDING_MODEL: ${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
+      OPENAI_TIMEOUT_SECONDS: ${OPENAI_TIMEOUT_SECONDS:-45}
+      CHAT_TEMPERATURE: ${CHAT_TEMPERATURE:-0.6}
+      CHAT_MAX_TOKENS: ${CHAT_MAX_TOKENS:-450}
+      CHAT_RECENT_MESSAGES: ${CHAT_RECENT_MESSAGES:-5}
+      CHAT_RELEVANT_MESSAGES: ${CHAT_RELEVANT_MESSAGES:-6}
+      CHAT_MAX_CONTEXT_CHARS: ${CHAT_MAX_CONTEXT_CHARS:-6000}
+      CHAT_RETRIEVAL_SCAN_LIMIT: ${CHAT_RETRIEVAL_SCAN_LIMIT:-200}
 
   frontend:
     build:
