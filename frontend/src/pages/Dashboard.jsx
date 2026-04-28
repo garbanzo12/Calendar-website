@@ -3,6 +3,7 @@ import { useState } from "react";
 import CalendarView from "../components/CalendarView";
 import Chat from "../components/Chat";
 import TaskList from "../components/TaskList";
+import { getApiErrorMessage } from "../api/errors";
 import { useAuth } from "../context/AuthContext";
 import { syncCalendar } from "../api/calendarService";
 
@@ -34,7 +35,7 @@ export default function Dashboard() {
       // Clear message after 4 seconds
       setTimeout(() => setSyncState(s => ({ ...s, message: "" })), 4000);
     } catch (err) {
-      setSyncState({ syncing: false, message: "❌ Error al sincronizar." });
+      setSyncState({ syncing: false, message: getApiErrorMessage(err, "Unable to sync calendar.") });
       setTimeout(() => setSyncState(s => ({ ...s, message: "" })), 4000);
     }
   };

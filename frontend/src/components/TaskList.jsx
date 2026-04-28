@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import apiClient from "../api/client";
+import { getApiErrorMessage } from "../api/errors";
 
 const TASKS_PER_PAGE = 4;
 
@@ -80,7 +81,7 @@ export default function TaskList({ onTaskDeleted, refreshSignal }) {
       setTasks(response.data);
       setCurrentPage(1); // reset to page 1 on every refresh
     } catch (requestError) {
-      setError(requestError.response?.data?.detail || "Unable to load tasks.");
+      setError(getApiErrorMessage(requestError, "Unable to load tasks."));
     } finally {
       setLoading(false);
     }
@@ -107,7 +108,7 @@ export default function TaskList({ onTaskDeleted, refreshSignal }) {
         onTaskDeleted(taskId);
       }
     } catch (requestError) {
-      setError(requestError.response?.data?.detail || "Unable to delete task.");
+      setError(getApiErrorMessage(requestError, "Unable to delete task."));
     }
   };
 
@@ -154,7 +155,7 @@ export default function TaskList({ onTaskDeleted, refreshSignal }) {
       handleEditClose();
     } catch (requestError) {
       console.error("Failed to update task:", requestError);
-      setEditError(requestError.response?.data?.detail || "Unable to save changes.");
+      setEditError(getApiErrorMessage(requestError, "Unable to save changes."));
     } finally {
       setSaving(false);
     }
