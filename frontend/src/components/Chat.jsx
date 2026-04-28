@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 
 import apiClient from "../api/client";
+import { getApiErrorMessage } from "../api/errors";
 
 export default function Chat({ onTaskCreated }) {
   const [message, setMessage] = useState("");
@@ -24,7 +25,14 @@ export default function Chat({ onTaskCreated }) {
           setMessages(response.data);
         }
       } catch (error) {
-        console.error("Failed to load chat history:", error);
+        const fallbackMessage = getApiErrorMessage(error, "Unable to load chat history.");
+        console.error("Failed to load chat history:", fallbackMessage);
+        setMessages([
+          {
+            role: "assistant",
+            content: fallbackMessage,
+          },
+        ]);
       } finally {
         setIsLoadingHistory(false);
       }
@@ -70,8 +78,10 @@ export default function Chat({ onTaskCreated }) {
         onTaskCreated(response.data.task);
       }
     } catch (error) {
-      const errorMessage =
-        error.response?.data?.detail || "I couldn't schedule that task. Please try another phrasing.";
+      const errorMessage = getApiErrorMessage(
+        error,
+        "I couldn't schedule that task. Please try another phrasing."
+      );
 
       setMessages((prev) => [
         ...prev,

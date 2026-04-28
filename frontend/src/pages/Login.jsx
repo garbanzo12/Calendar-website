@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import apiClient from "../api/client";
+import { getApiErrorMessage } from "../api/errors";
 import { syncCalendar } from "../api/calendarService";
 import { useAuth } from "../context/AuthContext";
 
@@ -33,7 +34,7 @@ export default function Login() {
 
       navigate("/dashboard");
     } catch (requestError) {
-      setError(requestError.response?.data?.detail || "Login failed.");
+      setError(getApiErrorMessage(requestError, "Login failed."));
     } finally {
       setIsSubmitting(false);
     }
@@ -46,7 +47,7 @@ export default function Login() {
       const response = await apiClient.get("/auth/google/login");
       window.location.href = response.data.auth_url;
     } catch (requestError) {
-      setError(requestError.response?.data?.detail || "Google login is not available.");
+      setError(getApiErrorMessage(requestError, "Google login is not available."));
     }
   };
 

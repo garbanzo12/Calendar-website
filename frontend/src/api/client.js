@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API_BASE_URL = import.meta.env.VITE_API_URL?.trim();
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -27,6 +27,13 @@ apiClient.interceptors.response.use(
     const url = config?.url || "UNKNOWN";
     const status = error.response?.status || error.code || "UNKNOWN";
     const message = error.response?.data?.detail || error.response?.data || error.message;
+
+    if (!API_BASE_URL) {
+      error.userMessage = "API base URL is not configured. Set VITE_API_URL to your deployed FastAPI backend.";
+    } else if (!error.response) {
+      error.userMessage = "Unable to reach the backend right now. Please try again in a moment.";
+    }
+
     console.error(`[ERROR] ${method} ${url} → ${status}`, message);
     return Promise.reject(error);
   }
