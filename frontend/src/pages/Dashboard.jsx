@@ -3,19 +3,19 @@ import { useState } from "react";
 import CalendarView from "../components/CalendarView";
 import Chat from "../components/Chat";
 import TaskList from "../components/TaskList";
+import { getApiErrorMessage } from "../api/errors";
 import { useAuth } from "../context/AuthContext";
-import { syncCalendar } from "../api/calendarService";
 
 export default function Dashboard() {
   const { user } = useAuth();
   const [refreshCounter, setRefreshCounter] = useState(0);
-  const [syncState, setSyncState] = useState({ syncing: false, message: "" });
   const greeting = user?.name?.split(" ")[0] || "there";
 
   const handleTaskChanged = () => {
     setRefreshCounter((value) => value + 1);
   };
 
+<<<<<<< HEAD
   const handleManualSync = async () => {
     setSyncState({ syncing: true, message: "Sincronizando calendario..." });
     try {
@@ -34,11 +34,13 @@ export default function Dashboard() {
       // Clear message after 4 seconds
       setTimeout(() => setSyncState(s => ({ ...s, message: "" })), 4000);
     } catch (err) {
-      setSyncState({ syncing: false, message: "❌ Error al sincronizar." });
+      setSyncState({ syncing: false, message: getApiErrorMessage(err, "Unable to sync calendar.") });
       setTimeout(() => setSyncState(s => ({ ...s, message: "" })), 4000);
     }
   };
 
+=======
+>>>>>>> parent of 4a8ac17 (Merge pull request #8 from garbanzo12/latency-2)
   return (
     <main className="dashboard-shell">
       <section className="hero-banner">
@@ -48,16 +50,6 @@ export default function Dashboard() {
           <p>
             Use chat to schedule tasks, review what is coming up, and see everything aligned on the calendar.
           </p>
-          <div style={{ marginTop: "16px", display: "flex", alignItems: "center", gap: "16px" }}>
-            <button 
-              className="primary-button" 
-              onClick={handleManualSync} 
-              disabled={syncState.syncing}
-            >
-              {syncState.syncing ? "Sincronizando..." : "Sync Calendar"}
-            </button>
-            {syncState.message && <span style={{ fontSize: "14px", color: "var(--foreground-muted)" }}>{syncState.message}</span>}
-          </div>
         </div>
       </section>
 

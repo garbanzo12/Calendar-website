@@ -4,13 +4,16 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
 
 import apiClient from "../api/client";
+import { getApiErrorMessage } from "../api/errors";
 
 export default function CalendarView({ refreshSignal }) {
   const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
     const loadEvents = async () => {
+      setLoading(true);
       setError("");
 
       try {
@@ -23,7 +26,9 @@ export default function CalendarView({ refreshSignal }) {
         }));
         setEvents(mappedEvents);
       } catch (requestError) {
-        setError(requestError.response?.data?.detail || "Unable to load calendar.");
+        setError(getApiErrorMessage(requestError, "Unable to load calendar."));
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -40,6 +45,7 @@ export default function CalendarView({ refreshSignal }) {
       </div>
 
       {error ? <p className="status-text error-text">{error}</p> : null}
+      {loading ? <p className="status-text">Loading calendar...</p> : null}
 
       <div className="calendar-wrapper">
         <FullCalendar

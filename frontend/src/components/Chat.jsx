@@ -1,11 +1,18 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 
 import apiClient from "../api/client";
+import { getApiErrorMessage } from "../api/errors";
 
 export default function Chat({ onTaskCreated }) {
   const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState([
+    {
+      role: "system",
+      content: "Tell me something like 'Schedule a meeting tomorrow at 3pm'.",
+    },
+  ]);
   const [isSending, setIsSending] = useState(false);
+<<<<<<< HEAD
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const messagesEndRef = useRef(null);
 
@@ -24,7 +31,14 @@ export default function Chat({ onTaskCreated }) {
           setMessages(response.data);
         }
       } catch (error) {
-        console.error("Failed to load chat history:", error);
+        const fallbackMessage = getApiErrorMessage(error, "Unable to load chat history.");
+        console.error("Failed to load chat history:", fallbackMessage);
+        setMessages([
+          {
+            role: "assistant",
+            content: fallbackMessage,
+          },
+        ]);
       } finally {
         setIsLoadingHistory(false);
       }
@@ -39,6 +53,8 @@ export default function Chat({ onTaskCreated }) {
   useEffect(() => {
     scrollToBottom();
   }, [messages, isSending]);
+=======
+>>>>>>> parent of 4a8ac17 (Merge pull request #8 from garbanzo12/latency-2)
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -55,28 +71,29 @@ export default function Chat({ onTaskCreated }) {
 
     try {
       const response = await apiClient.post("/chat", { message: trimmed });
-      const newMessages = response.data.messages || [];
-      
-      // If the backend returned both messages, we can just append the assistant one.
-      // Or we can just append from response.data.message
-      const assistantMessage = newMessages.find(m => m.role === "assistant") || {
-        role: "assistant",
-        content: response.data.message || "Task scheduled successfully",
-      };
+      const systemMessage = response.data.message || "Task scheduled successfully";
 
-      setMessages((prev) => [...prev, assistantMessage]);
+      setMessages([
+        ...nextMessages,
+        {
+          role: "system",
+          content: systemMessage,
+        },
+      ]);
 
-      if (onTaskCreated && response.data.task) {
+      if (onTaskCreated) {
         onTaskCreated(response.data.task);
       }
     } catch (error) {
-      const errorMessage =
-        error.response?.data?.detail || "I couldn't schedule that task. Please try another phrasing.";
+      const errorMessage = getApiErrorMessage(
+        error,
+        "I couldn't schedule that task. Please try another phrasing."
+      );
 
-      setMessages((prev) => [
-        ...prev,
+      setMessages([
+        ...nextMessages,
         {
-          role: "assistant",
+          role: "system",
           content: errorMessage,
         },
       ]);
@@ -95,26 +112,15 @@ export default function Chat({ onTaskCreated }) {
       </div>
 
       <div className="chat-history">
-        {isLoadingHistory ? (
-          <div className="chat-loading">Cargando historial...</div>
-        ) : (
-          messages.map((entry, index) => (
-            <article
-              className={`message-bubble ${entry.role === "user" ? "user-message" : "system-message"}`}
-              key={entry.id ? entry.id : `${entry.role}-${index}`}
-            >
-              <span>{entry.role === "user" ? "You" : "Assistant"}</span>
-              <p>{entry.content}</p>
-            </article>
-          ))
-        )}
-        {isSending && (
-          <article className="message-bubble system-message">
-            <span>Assistant</span>
-            <p className="typing-indicator">Escribiendo<span>.</span><span>.</span><span>.</span></p>
+        {messages.map((entry, index) => (
+          <article
+            className={`message-bubble ${entry.role === "user" ? "user-message" : "system-message"}`}
+            key={`${entry.role}-${index}`}
+          >
+            <span>{entry.role === "user" ? "You" : "Assistant"}</span>
+            <p>{entry.content}</p>
           </article>
-        )}
-        <div ref={messagesEndRef} />
+        ))}
       </div>
 
       <form className="chat-form" onSubmit={handleSubmit}>
@@ -124,7 +130,7 @@ export default function Chat({ onTaskCreated }) {
           value={message}
           onChange={(event) => setMessage(event.target.value)}
         />
-        <button className="primary-button" disabled={isSending || isLoadingHistory} type="submit">
+        <button className="primary-button" disabled={isSending} type="submit">
           {isSending ? "Sending..." : "Send"}
         </button>
       </form>

@@ -19,34 +19,7 @@ logger = logging.getLogger("api")
 # Keep uvicorn access logs minimal to reduce noise
 logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
 
-@asynccontextmanager
-async def lifespan(_: FastAPI):
-    logger.info("[STARTUP] Server initialization started")
-
-    for attempt in range(1, settings.db_connect_retries + 1):
-        try:
-            check_database_connection()
-            logger.info("[DB] Connected successfully")
-            break
-        except Exception as exc:
-            logger.error(
-                "[ERROR] Database connection failed (attempt %s/%s): %s",
-                attempt,
-                settings.db_connect_retries,
-                str(exc),
-            )
-            if attempt >= settings.db_connect_retries:
-                raise
-            await asyncio.sleep(settings.db_connect_retry_delay_seconds)
-
-    if settings.google_redirect_uri:
-        logger.info("[STARTUP] GOOGLE_REDIRECT_URI configured as %s", settings.google_redirect_uri)
-    else:
-        logger.warning("[STARTUP] GOOGLE_REDIRECT_URI is not configured")
-
-    logger.info("[STARTUP] Server initialized")
-    yield
-    logger.info("[SHUTDOWN] Server stopped")
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="Personal AI Calendar Backend",
@@ -77,8 +50,9 @@ origins = [
 ]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=False,
+    allow_origins=settings.cors_origins,
+    allow_origin_regex=r"https://.*\.insforge\.site",
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
