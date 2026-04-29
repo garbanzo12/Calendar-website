@@ -2,8 +2,8 @@ import logging
 import time
 import asyncio
 from contextlib import asynccontextmanager
-from app.database import engine
-from app.models import Base
+from app.db.database import engine
+from app.db.models import Base
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
