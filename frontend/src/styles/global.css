@@ -3,7 +3,7 @@
   font-family: "Segoe UI", "Helvetica Neue", sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  background:
+  --page-background:
     radial-gradient(circle at top left, rgba(255, 199, 95, 0.36), transparent 28%),
     radial-gradient(circle at top right, rgba(20, 122, 255, 0.2), transparent 34%),
     linear-gradient(180deg, #fff8ef 0%, #f4f7fb 55%, #eef2f7 100%);
@@ -20,6 +20,25 @@
   --shadow: 0 22px 50px rgba(42, 56, 92, 0.12);
 }
 
+[data-theme="dark"] {
+  color-scheme: dark;
+  --page-background:
+    radial-gradient(circle at top left, rgba(56, 189, 248, 0.16), transparent 30%),
+    radial-gradient(circle at top right, rgba(110, 231, 183, 0.12), transparent 34%),
+    linear-gradient(180deg, #0a1020 0%, #111827 55%, #131e30 100%);
+  color: #e8edf9;
+  --ink: #e8edf9;
+  --muted: #aab5cf;
+  --panel: rgba(17, 24, 39, 0.78);
+  --panel-strong: #111827;
+  --line: rgba(190, 206, 236, 0.18);
+  --accent: #2dd4bf;
+  --accent-strong: #14b8a6;
+  --accent-soft: rgba(45, 212, 191, 0.2);
+  --danger: #f87171;
+  --shadow: 0 22px 50px rgba(2, 6, 23, 0.45);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -32,6 +51,7 @@ body,
 }
 
 body {
+  background: var(--page-background);
   color: var(--ink);
 }
 
@@ -64,7 +84,7 @@ button {
   gap: 1rem;
   padding: 1rem 1.5rem;
   backdrop-filter: blur(20px);
-  background: rgba(255, 255, 255, 0.7);
+  background: color-mix(in srgb, var(--panel-strong) 70%, transparent);
   border-bottom: 1px solid var(--line);
 }
 
@@ -122,7 +142,7 @@ button {
   gap: 0.75rem;
   padding: 0.45rem 0.85rem;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.95);
+  background: color-mix(in srgb, var(--panel-strong) 92%, transparent);
   border: 1px solid var(--line);
 }
 
@@ -153,7 +173,7 @@ button {
 }
 
 .ghost-button {
-  background: white;
+  background: var(--panel-strong);
   color: var(--ink);
   border: 1px solid var(--line);
 }
@@ -179,6 +199,9 @@ button {
   justify-content: center;
   gap: 0.65rem;
   font-weight: 600;
+  width: min(100%, 360px);
+  margin: 0 auto;
+  padding: 0.9rem 1.35rem;
 }
 
 .google-icon {
@@ -223,6 +246,21 @@ button {
   padding: 2.2rem;
 }
 
+.hero-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.hero-content {
+  max-width: 65ch;
+}
+
+.dashboard-theme-toggle {
+  flex-shrink: 0;
+}
+
 .auth-hero h1,
 .hero-banner h1 {
   margin: 0.6rem 0 0.8rem;
@@ -257,6 +295,10 @@ button {
 .chat-form {
   display: grid;
   gap: 0.95rem;
+}
+
+.auth-form {
+  justify-items: center;
 }
 
 .auth-form label {
@@ -667,13 +709,22 @@ button {
   }
 
   .navbar {
-    flex-direction: column;
-    align-items: stretch;
+    padding: 0.85rem 1rem;
   }
 
   .nav-actions {
-    justify-content: space-between;
+    width: 100%;
+    justify-content: flex-end;
     flex-wrap: wrap;
+  }
+
+  .auth-hero,
+  .auth-card {
+    padding: 1.4rem;
+  }
+
+  .hero-banner {
+    align-items: center;
   }
 }
 
@@ -689,15 +740,55 @@ button {
   .hero-banner,
   .panel {
     border-radius: 1.25rem;
-    padding: 1rem;
+    padding: 1.1rem;
+  }
+
+  .auth-page {
+    gap: 0.85rem;
+  }
+
+  .hero-banner {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .task-card,
   .panel-header,
-  .nav-actions,
   .user-chip {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .navbar {
+    gap: 0.75rem;
+  }
+
+  .brand {
+    gap: 0.65rem;
+  }
+
+  .brand strong {
+    font-size: 0.95rem;
+  }
+
+  .brand p {
+    font-size: 0.8rem;
+  }
+
+  .nav-actions {
+    justify-content: stretch;
+    width: 100%;
+  }
+
+  .theme-toggle,
+  .google-login-button,
+  .user-chip,
+  .nav-actions .ghost-button {
+    width: 100%;
+  }
+
+  .google-login-button {
+    min-height: 2.9rem;
   }
 
   .message-bubble {
