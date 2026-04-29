@@ -2,7 +2,7 @@ FROM node:18
 
 WORKDIR /app
 
-ARG VITE_API_URL=http://localhost:8000
+ARG VITE_API_URL=https://calendar-website-7vtk.onrender.com
 ENV VITE_API_URL=$VITE_API_URL
 
 COPY package*.json ./
