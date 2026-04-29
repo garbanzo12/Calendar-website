@@ -68,11 +68,14 @@ async def log_requests(request: Request, call_next):
         process_time = int((time.time() - start_time) * 1000)
         logger.exception(f"[ERROR] {request.method} {request.url.path} → 500 ({process_time}ms): {str(exc)}")
         raise
-
+origins = [
+    "http://localhost:5173",  # desarrollo
+    "https://calendar-website-frontend.onrender.com"
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins or ["*"],
-    allow_credentials=True,
+    allow_origins=origins,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
