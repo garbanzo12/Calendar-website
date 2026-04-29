@@ -1,10 +1,15 @@
-import time
 import logging
+import time
+import asyncio
+from contextlib import asynccontextmanager
+from app.db.database import engine
+from app.db.models import Base
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.db.database import Base, engine
+from app.db.database import check_database_connection
 from app.routes import auth, calendar, chat, tasks
 
 # Configure logging
@@ -20,7 +25,9 @@ app = FastAPI(
     title="Personal AI Calendar Backend",
     version="1.0.0",
     description="FastAPI backend with PostgreSQL, JWT auth, Google OAuth, Google Calendar, and chat-to-task processing.",
+    lifespan=lifespan,
 )
+Base.metadata.create_all(bind=engine)
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
@@ -37,7 +44,10 @@ async def log_requests(request: Request, call_next):
         process_time = int((time.time() - start_time) * 1000)
         logger.exception(f"[ERROR] {request.method} {request.url.path} → 500 ({process_time}ms): {str(exc)}")
         raise
-
+origins = [
+    "http://localhost:5173",  # desarrollo
+    "https://calendar-website-frontend.onrender.com"
+]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
@@ -56,3 +66,8 @@ app.include_router(chat.router)
 @app.get("/")
 def read_root() -> dict[str, str]:
     return {"message": "Personal AI Calendar Backend is running"}
+
+
+@app.get("/health")
+def health_check() -> dict[str, str]:
+    return {"status": "ok"}

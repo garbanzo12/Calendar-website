@@ -16,9 +16,6 @@ logger = logging.getLogger(__name__)
 
 
 def _log_generated_token(token: str) -> None:
-    print("=== JWT TOKEN ===")
-    print(token)
-    print("=================")
     logger.info("JWT Token generated: %s", token)
 
 
