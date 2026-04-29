@@ -173,6 +173,20 @@ button {
   width: 100%;
 }
 
+.google-login-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  font-weight: 600;
+}
+
+.google-icon {
+  width: 1.1rem;
+  height: 1.1rem;
+  flex-shrink: 0;
+}
+
 .page-shell,
 .dashboard-shell {
   width: min(1180px, calc(100% - 2rem));

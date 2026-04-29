@@ -40,9 +40,6 @@ export default function Navbar({ isAuthenticated }) {
             <Link className="ghost-button" to="/login">
               Login
             </Link>
-            <Link className="primary-button" to="/register">
-              Create account
-            </Link>
           </>
         )}
       </nav>

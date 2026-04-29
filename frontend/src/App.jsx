@@ -4,7 +4,6 @@ import Navbar from "./components/Navbar";
 import { useAuth } from "./context/AuthContext";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
-import Register from "./pages/Register";
 
 function ProtectedRoute({ children }) {
   const { token, authReady } = useAuth();
@@ -41,14 +40,7 @@ export default function App() {
             </GuestRoute>
           }
         />
-        <Route
-          path="/register"
-          element={
-            <GuestRoute>
-              <Register />
-            </GuestRoute>
-          }
-        />
+        <Route path="/register" element={<Navigate to="/login" replace />} />
         <Route
           path="/dashboard"
           element={
