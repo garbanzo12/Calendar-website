@@ -12,46 +12,6 @@ export default function Chat({ onTaskCreated }) {
     },
   ]);
   const [isSending, setIsSending] = useState(false);
-  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
-  const messagesEndRef = useRef(null);
-
-  useEffect(() => {
-    const fetchHistory = async () => {
-      try {
-        const response = await apiClient.get("/chat/history?limit=50");
-        if (response.data.length === 0) {
-          setMessages([
-            {
-              role: "assistant",
-              content: "Tell me something like 'Schedule a meeting tomorrow at 3pm'.",
-            },
-          ]);
-        } else {
-          setMessages(response.data);
-        }
-      } catch (error) {
-        const fallbackMessage = getApiErrorMessage(error, "Unable to load chat history.");
-        console.error("Failed to load chat history:", fallbackMessage);
-        setMessages([
-          {
-            role: "assistant",
-            content: fallbackMessage,
-          },
-        ]);
-      } finally {
-        setIsLoadingHistory(false);
-      }
-    };
-    fetchHistory();
-  }, []);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, isSending]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
