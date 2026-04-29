@@ -10,6 +10,10 @@ from app.core.security import create_access_token, hash_password, verify_passwor
 from app.db.models import OAuthToken, User
 from app.db.schemas import UserCreate
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class AuthService:
     @staticmethod
@@ -37,6 +41,7 @@ class AuthService:
 
     @staticmethod
     def get_google_auth_url() -> str:
+        AuthService._ensure_google_oauth_config()
         params = {
             "client_id": settings.google_client_id,
             "redirect_uri": settings.google_redirect_uri,
@@ -69,6 +74,7 @@ class AuthService:
 
     @staticmethod
     async def _exchange_code_for_tokens(code: str) -> dict:
+        AuthService._ensure_google_oauth_config()
         payload = {
             "code": code,
             "client_id": settings.google_client_id,
@@ -80,6 +86,11 @@ class AuthService:
         async with httpx.AsyncClient(timeout=20.0) as client:
             response = await client.post("https://oauth2.googleapis.com/token", data=payload)
             if response.status_code >= 400:
+                logger.error(
+                    "[ERROR] Google OAuth token exchange failed status=%s body=%s",
+                    response.status_code,
+                    response.text,
+                )
                 raise HTTPException(status_code=400, detail="Failed to exchange Google OAuth code")
             return response.json()
 
@@ -89,6 +100,11 @@ class AuthService:
         async with httpx.AsyncClient(timeout=20.0) as client:
             response = await client.get("https://www.googleapis.com/oauth2/v2/userinfo", headers=headers)
             if response.status_code >= 400:
+                logger.error(
+                    "[ERROR] Google user profile fetch failed status=%s body=%s",
+                    response.status_code,
+                    response.text,
+                )
                 raise HTTPException(status_code=400, detail="Failed to fetch Google user profile")
             return response.json()
 
@@ -124,3 +140,19 @@ class AuthService:
     @staticmethod
     def _generate_google_placeholder_password(email: str) -> str:
         return f"google-oauth::{email}"
+
+    @staticmethod
+    def _ensure_google_oauth_config() -> None:
+        missing = []
+        if not settings.google_client_id:
+            missing.append("GOOGLE_CLIENT_ID")
+        if not settings.google_client_secret:
+            missing.append("GOOGLE_CLIENT_SECRET")
+        if not settings.google_redirect_uri:
+            missing.append("GOOGLE_REDIRECT_URI")
+        if missing:
+            logger.error("[ERROR] Missing Google OAuth configuration: %s", ", ".join(missing))
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Google OAuth is not configured on the server",
+            )

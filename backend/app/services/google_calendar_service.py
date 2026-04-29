@@ -74,7 +74,7 @@ class GoogleCalendarService:
         if not time_max:
             time_max = datetime(target_year, 12, 31, 23, 59, 59, tzinfo=timezone.utc).isoformat()
 
-        print(f"Fetching events from {time_min} to {time_max}")
+        logger.info("[GOOGLE FETCH] user_id=%s calendar_id=%s time_min=%s time_max=%s", user_id, calendar_id, time_min, time_max)
 
         params = {
             "singleEvents": "true",
@@ -94,11 +94,9 @@ class GoogleCalendarService:
             error_message="Failed to fetch Google Calendar events",
         )
 
-        print("=== GOOGLE EVENTS RESPONSE ===")
-        print(response.json())
-        print("==============================")
-
-        return response.json().get("items", [])
+        items = response.json().get("items", [])
+        logger.info("[GOOGLE FETCH] user_id=%s calendar_id=%s events=%s", user_id, calendar_id, len(items))
+        return items
 
     @classmethod
     async def get_events(

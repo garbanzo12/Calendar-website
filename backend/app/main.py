@@ -1,10 +1,13 @@
-import time
 import logging
+import time
+import asyncio
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.db.database import Base, engine
+from app.db.database import check_database_connection
 from app.routes import auth, calendar, chat, tasks
 
 # Configure logging
@@ -14,17 +17,40 @@ logger = logging.getLogger("api")
 # Keep uvicorn access logs minimal to reduce noise
 logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
 
-Base.metadata.create_all(bind=engine)
-try:
-    with engine.begin() as conn:
-        conn.exec_driver_sql("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_sync_at TIMESTAMP")
-except Exception:
-    pass
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    logger.info("[STARTUP] Server initialization started")
+
+    for attempt in range(1, settings.db_connect_retries + 1):
+        try:
+            check_database_connection()
+            logger.info("[DB] Connected successfully")
+            break
+        except Exception as exc:
+            logger.error(
+                "[ERROR] Database connection failed (attempt %s/%s): %s",
+                attempt,
+                settings.db_connect_retries,
+                str(exc),
+            )
+            if attempt >= settings.db_connect_retries:
+                raise
+            await asyncio.sleep(settings.db_connect_retry_delay_seconds)
+
+    if settings.google_redirect_uri:
+        logger.info("[STARTUP] GOOGLE_REDIRECT_URI configured as %s", settings.google_redirect_uri)
+    else:
+        logger.warning("[STARTUP] GOOGLE_REDIRECT_URI is not configured")
+
+    logger.info("[STARTUP] Server initialized")
+    yield
+    logger.info("[SHUTDOWN] Server stopped")
 
 app = FastAPI(
     title="Personal AI Calendar Backend",
     version="1.0.0",
     description="FastAPI backend with PostgreSQL, JWT auth, Google OAuth, Google Calendar, and chat-to-task processing.",
+    lifespan=lifespan,
 )
 
 @app.middleware("http")
@@ -45,7 +71,7 @@ async def log_requests(request: Request, call_next):
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.cors_origins or ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -60,3 +86,8 @@ app.include_router(chat.router)
 @app.get("/")
 def read_root() -> dict[str, str]:
     return {"message": "Personal AI Calendar Backend is running"}
+
+
+@app.get("/health")
+def health_check() -> dict[str, str]:
+    return {"status": "ok"}
