@@ -24,9 +24,6 @@ export default function Dashboard({ isDarkTheme, onToggleTheme }) {
             Use chat to schedule tasks, review what is coming up, and see everything aligned on the calendar.
           </p>
         </div>
-        <button className="ghost-button dashboard-theme-toggle" onClick={onToggleTheme} type="button">
-          {isDarkTheme ? "Light mode" : "Dark mode"}
-        </button>
       </section>
 
       <section className="dashboard-grid">
