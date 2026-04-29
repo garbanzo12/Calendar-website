@@ -15,11 +15,6 @@ logger = logging.getLogger("api")
 logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
 
 Base.metadata.create_all(bind=engine)
-try:
-    with engine.begin() as conn:
-        conn.exec_driver_sql("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_sync_at TIMESTAMP")
-except Exception:
-    pass
 
 app = FastAPI(
     title="Personal AI Calendar Backend",

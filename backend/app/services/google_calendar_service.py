@@ -186,88 +186,44 @@ class GoogleCalendarService:
         error_message: str,
         **request_kwargs,
     ) -> httpx.Response:
-        import time
-        import asyncio
-
         oauth_token = cls._get_oauth_token(db, user_id)
         access_token = await cls._ensure_valid_access_token(db, oauth_token)
 
-        action_verb = {"POST": "CREATE", "DELETE": "DELETE", "PUT": "UPDATE", "GET": "FETCH"}.get(method.upper(), method.upper())
-        event_id = url.split("/")[-1] if action_verb in ("DELETE", "UPDATE") else None
-
+        import time
         start_time = time.time()
-        max_retries = 1
-
-        for attempt in range(max_retries + 1):
-            try:
-                async with httpx.AsyncClient(timeout=20.0) as client:
+        try:
+            async with httpx.AsyncClient(timeout=20.0) as client:
+                response = await client.request(
+                    method=method,
+                    url=url,
+                    headers=cls._headers(access_token),
+                    **request_kwargs,
+                )
+                if response.status_code == status.HTTP_401_UNAUTHORIZED and oauth_token.refresh_token:
+                    access_token = await cls._refresh_and_store_access_token(db, oauth_token)
                     response = await client.request(
                         method=method,
                         url=url,
                         headers=cls._headers(access_token),
                         **request_kwargs,
                     )
-                    
-                    if response.status_code == status.HTTP_401_UNAUTHORIZED and oauth_token.refresh_token:
-                        access_token = await cls._refresh_and_store_access_token(db, oauth_token)
-                        response = await client.request(
-                            method=method,
-                            url=url,
-                            headers=cls._headers(access_token),
-                            **request_kwargs,
-                        )
-                    
-                    # Interceptar fallos temporales (Rate limits, Timeout, Server Errors)
-                    if response.status_code in [408, 429] or response.status_code >= 500:
-                        if attempt < max_retries:
-                            await asyncio.sleep(0.5 * (attempt + 1))
-                            continue
-
-                    # Manejo especial para 410 Gone en eliminaciones (idempotencia)
-                    if response.status_code == 410 and action_verb == "DELETE":
-                        duration_ms = int((time.time() - start_time) * 1000)
-                        event_id_log = f" event_id={event_id}" if event_id else ""
-                        logger.info(
-                            f"[GOOGLE {action_verb}] user_id={user_id} status={response.status_code} duration={duration_ms}ms{event_id_log} (already deleted)"
-                        )
-                        return response
-
-                    try:
-                        cls._raise_for_status(response, error_message)
-                    except HTTPException as exc:
-                        duration_ms = int((time.time() - start_time) * 1000)
-                        logger.error(f"[ERROR GOOGLE] status={response.status_code} duration={duration_ms}ms reason={exc.detail}")
-                        raise
-                    
-                    duration_ms = int((time.time() - start_time) * 1000)
-                    
-                    if not event_id and action_verb != "FETCH":
-                        try:
-                            resp_json = response.json()
-                            event_id = resp_json.get("id")
-                        except Exception:
-                            pass
-                            
-                    event_id_log = f" event_id={event_id}" if event_id else ""
-                    
-                    logger.info(
-                        f"[GOOGLE {action_verb}] user_id={user_id} status={response.status_code} duration={duration_ms}ms{event_id_log}"
-                    )
-                    return response
-
-            except httpx.RequestError as exc:
-                if attempt < max_retries:
-                    await asyncio.sleep(0.5 * (attempt + 1))
-                    continue
-                duration_ms = int((time.time() - start_time) * 1000)
-                logger.error(f"[ERROR GOOGLE] status=N/A duration={duration_ms}ms reason={exc.__class__.__name__}")
-                raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=error_message) from exc
-            except HTTPException:
-                raise
-            except Exception as exc:
-                duration_ms = int((time.time() - start_time) * 1000)
-                logger.error(f"[ERROR GOOGLE] status=N/A duration={duration_ms}ms reason=UnexpectedError")
-                raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=error_message) from exc
+                cls._raise_for_status(response, error_message)
+                
+                duration_ms = (time.time() - start_time) * 1000
+                logger.info(
+                    "Google Calendar API | method=%s URL=%s | status_code=%s | execution_time_ms=%.2f",
+                    method,
+                    url,
+                    response.status_code,
+                    duration_ms,
+                )
+                return response
+        except HTTPException:
+            raise
+        except Exception as exc:
+            duration_ms = (time.time() - start_time) * 1000
+            logger.exception("%s | execution_time_ms=%.2f", error_message, duration_ms)
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=error_message) from exc
 
     @classmethod
     def _get_oauth_token(cls, db: Session, user_id: int) -> OAuthToken:

@@ -2,8 +2,11 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import apiClient from "../api/client";
+<<<<<<< HEAD
 import { getApiErrorMessage } from "../api/errors";
 import { syncCalendar } from "../api/calendarService";
+=======
+>>>>>>> parent of 4a8ac17 (Merge pull request #8 from garbanzo12/latency-2)
 import { useAuth } from "../context/AuthContext";
 
 export default function Login() {
@@ -28,9 +31,12 @@ export default function Login() {
       const token = response.data.access_token;
       login(token, response.data.user);
 
-      syncCalendar(token).catch((err) => {
-        console.warn("Sync failed, continuing...", err);
-      });
+      apiClient
+        .post("/calendar/sync", null, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        .then(() => console.log("Calendar synced successfully"))
+        .catch((err) => console.error("Calendar sync failed:", err));
 
       navigate("/dashboard");
     } catch (requestError) {
