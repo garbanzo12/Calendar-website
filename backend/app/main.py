@@ -2,6 +2,8 @@ import logging
 import time
 import asyncio
 from contextlib import asynccontextmanager
+from app.database import engine
+from app.models import Base
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -52,6 +54,7 @@ app = FastAPI(
     description="FastAPI backend with PostgreSQL, JWT auth, Google OAuth, Google Calendar, and chat-to-task processing.",
     lifespan=lifespan,
 )
+Base.metadata.create_all(bind=engine)
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
