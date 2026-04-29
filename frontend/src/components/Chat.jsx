@@ -12,7 +12,6 @@ export default function Chat({ onTaskCreated }) {
     },
   ]);
   const [isSending, setIsSending] = useState(false);
-<<<<<<< HEAD
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const messagesEndRef = useRef(null);
 
@@ -53,8 +52,6 @@ export default function Chat({ onTaskCreated }) {
   useEffect(() => {
     scrollToBottom();
   }, [messages, isSending]);
-=======
->>>>>>> parent of 4a8ac17 (Merge pull request #8 from garbanzo12/latency-2)
 
   const handleSubmit = async (event) => {
     event.preventDefault();
