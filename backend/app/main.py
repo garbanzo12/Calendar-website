@@ -25,7 +25,6 @@ app = FastAPI(
     title="Personal AI Calendar Backend",
     version="1.0.0",
     description="FastAPI backend with PostgreSQL, JWT auth, Google OAuth, Google Calendar, and chat-to-task processing.",
-    lifespan=lifespan,
 )
 Base.metadata.create_all(bind=engine)
 
