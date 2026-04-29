@@ -2,11 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import apiClient from "../api/client";
-<<<<<<< HEAD
 import { getApiErrorMessage } from "../api/errors";
-import { syncCalendar } from "../api/calendarService";
-=======
->>>>>>> parent of 4a8ac17 (Merge pull request #8 from garbanzo12/latency-2)
 import { useAuth } from "../context/AuthContext";
 
 export default function Login() {
