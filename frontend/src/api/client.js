@@ -34,6 +34,12 @@ apiClient.interceptors.response.use(
       error.userMessage = "Unable to reach the backend right now. Please try again in a moment.";
     }
 
+    if (status === 401) {
+      localStorage.removeItem("calendar_token");
+      localStorage.removeItem("calendar_user");
+      window.location.href = "/login";
+    }
+
     console.error(`[ERROR] ${method} ${url} → ${status}`, message);
     return Promise.reject(error);
   }
