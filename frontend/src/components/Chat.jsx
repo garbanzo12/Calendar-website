@@ -5,10 +5,10 @@ import { getApiErrorMessage } from "../api/errors";
 
 export default function Chat({ onTaskCreated }) {
   const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState([
+const [messages, setMessages] = useState([
     {
       role: "system",
-      content: "Try natural language: 'Lunch with Ana tomorrow at 1pm', 'Meeting next Monday at 3:30pm', 'Call mom on march 15 at 10am', 'Gym in 3 days at 7am'",
+      content: "Ejemplos: 'Cena con David mañana a las 2pm', 'Reunión el lunes a las 10am', 'Gym este viernes a las 7am', 'Lunch with Ana tomorrow at 1pm'",
     },
   ]);
   const [isSending, setIsSending] = useState(false);
@@ -89,7 +89,7 @@ export default function Chat({ onTaskCreated }) {
 
       <form className="chat-form" onSubmit={handleSubmit}>
         <textarea
-          placeholder="Try: Lunch with Ana tomorrow at 1pm, Meeting next Monday at 3pm, Gym this Friday at 7am, Call mom on March 15 at 10am"
+          placeholder="Ej: Cena con David mañana a las 2pm / Lunch with Ana tomorrow at 1pm / Gym este viernes a las 7am"
           rows="3"
           value={message}
           onChange={(event) => setMessage(event.target.value)}

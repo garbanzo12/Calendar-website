@@ -344,13 +344,13 @@ button {
 }
 
 .chat-panel {
-  min-height: 33rem;
+  min-height: 28rem;
   display: grid;
   grid-template-rows: auto 1fr auto;
 }
 
 .task-panel {
-  min-height: 33rem;
+  min-height: 28rem;
 }
 
 .calendar-panel {
@@ -365,9 +365,16 @@ button {
 }
 
 .chat-history {
-  min-height: 18rem;
-  max-height: 28rem;
-  overflow: auto;
+  min-height: 12rem;
+  max-height: 18rem;
+  overflow-y: auto;
+  padding-right: 0.3rem;
+}
+
+.task-list {
+  min-height: 12rem;
+  max-height: 18rem;
+  overflow-y: auto;
   padding-right: 0.3rem;
 }
 
