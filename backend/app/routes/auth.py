@@ -12,18 +12,12 @@ from app.db.schemas import TokenResponse, UserCreate, UserLogin, UserResponse
 from app.services.auth_service import AuthService
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
-logger = logging.getLogger(__name__)
-
-
-def _log_generated_token(token: str) -> None:
-    logger.info("JWT Token generated: %s", token)
 
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 def register(payload: UserCreate, db: Session = Depends(get_db)) -> TokenResponse:
     user = AuthService.register_user(db, payload)
     token = create_access_token(str(user.id))
-    _log_generated_token(token)
     return TokenResponse(access_token=token, user=user)
 
 
@@ -34,7 +28,6 @@ def login(payload: UserLogin, db: Session = Depends(get_db)) -> TokenResponse:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
     token = create_access_token(str(user.id))
-    _log_generated_token(token)
     return TokenResponse(access_token=token, user=user)
 
 
@@ -45,7 +38,6 @@ def login_form(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = D
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
     token = create_access_token(str(user.id))
-    _log_generated_token(token)
     return TokenResponse(access_token=token, user=user)
 
 
@@ -65,9 +57,8 @@ async def google_callback(
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     result = await AuthService.handle_google_callback(db, code)
-    _log_generated_token(result["jwt"])
     redirect_url = (
         f"{AuthService.get_success_redirect_url()}"
-        f"?token={result['jwt']}&email={result['user'].email}&name={result['user'].name}"
+        f"#token={result['jwt']}&email={result['user'].email}&name={result['user'].name}"
     )
     return RedirectResponse(url=redirect_url)

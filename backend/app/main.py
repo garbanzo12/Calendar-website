@@ -26,7 +26,6 @@ app = FastAPI(
     version="1.0.0",
     description="FastAPI backend with PostgreSQL, JWT auth, Google OAuth, Google Calendar, and chat-to-task processing.",
 )
-Base.metadata.create_all(bind=engine)
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
@@ -43,13 +42,9 @@ async def log_requests(request: Request, call_next):
         process_time = int((time.time() - start_time) * 1000)
         logger.exception(f"[ERROR] {request.method} {request.url.path} → 500 ({process_time}ms): {str(exc)}")
         raise
-origins = [
-    "http://localhost:5173",  # desarrollo
-    "https://calendar-website-frontend.onrender.com"
-]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=settings.cors_origins,
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
