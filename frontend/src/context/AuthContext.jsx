@@ -32,10 +32,10 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const callbackToken = params.get("token");
-    const email = params.get("email");
-    const name = params.get("name");
+    const hashParams = new URLSearchParams(location.hash.substring(1));
+    const callbackToken = hashParams.get("token");
+    const email = hashParams.get("email");
+    const name = hashParams.get("name");
 
     if (!callbackToken) {
       return;
@@ -47,6 +47,8 @@ export function AuthProvider({ children }) {
     };
 
     login(callbackToken, nextUser);
+
+    window.history.replaceState(null, "", "/dashboard");
 
     apiClient
       .post("/calendar/sync", null, {

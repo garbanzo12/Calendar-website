@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
 import apiClient from "../api/client";
 import { getApiErrorMessage } from "../api/errors";
@@ -8,10 +8,17 @@ export default function Chat({ onTaskCreated }) {
   const [messages, setMessages] = useState([
     {
       role: "system",
-      content: "Tell me something like 'Schedule a meeting tomorrow at 3pm'.",
+      content: "Try natural language: 'Lunch with Ana tomorrow at 1pm', 'Meeting next Monday at 3:30pm', 'Call mom on march 15 at 10am', 'Gym in 3 days at 7am'",
     },
   ]);
   const [isSending, setIsSending] = useState(false);
+  const chatRef = useRef(null);
+
+  useEffect(() => {
+    if (chatRef.current) {
+      chatRef.current.scrollTop = chatRef.current.scrollHeight;
+    }
+  }, [messages]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -68,7 +75,7 @@ export default function Chat({ onTaskCreated }) {
         </div>
       </div>
 
-      <div className="chat-history">
+      <div className="chat-history" ref={chatRef}>
         {messages.map((entry, index) => (
           <article
             className={`message-bubble ${entry.role === "user" ? "user-message" : "system-message"}`}
@@ -82,7 +89,7 @@ export default function Chat({ onTaskCreated }) {
 
       <form className="chat-form" onSubmit={handleSubmit}>
         <textarea
-          placeholder="Schedule lunch with Ana tomorrow at 1pm"
+          placeholder="Try: Lunch with Ana tomorrow at 1pm, Meeting next Monday at 3pm, Gym this Friday at 7am, Call mom on March 15 at 10am"
           rows="3"
           value={message}
           onChange={(event) => setMessage(event.target.value)}
