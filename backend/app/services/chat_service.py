@@ -229,7 +229,11 @@ class ChatService:
                     return time(hour=20, minute=0)
                 
                 hour = int(match.group(1))
-                minute = int(match.group(2)) if match.lastindex >= 2 else 0
+                minute = 0
+                if match.lastindex >= 2:
+                    group_2 = match.group(2)
+                    if group_2 and group_2.isdigit():
+                        minute = int(group_2)
                 
                 if "pm" in lowered[match.start():match.end()] and hour != 12:
                     hour += 12
